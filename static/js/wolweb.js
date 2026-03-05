@@ -26,7 +26,7 @@ $(document).ready(function () {
     jQuery.wakeUpDeviceByName = function (deviceName) {
         $.ajax({
             type: "GET",
-            url: (vDir == "/" ? "" : vDir) + "/wake/" + deviceName,
+            url: (vDir == "/" ? "" : vDir) + "/wake/" + encodeURIComponent(deviceName),
             contentType: "application/json; charset=utf-8",
             dataType: "json",
             success: function (data) {
@@ -34,6 +34,30 @@ $(document).ready(function () {
             },
             error: function (data, err) {
                 $.showToast(data.responseJSON ?? data);
+                console.error(data);
+            }
+        })
+    };
+
+    jQuery.pingDeviceByName = function (item) {
+        $.ajax({
+            type: "GET",
+            url: (vDir == "/" ? "" : vDir) + "/ping/" + encodeURIComponent(item.name),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var result = data.responseJSON ?? data;
+                item.ping_status = result.success ? "success" : "failed";
+                item.ping_result = result.message || (result.success ? "SUCCESS" : "FAILED");
+                $("#GridDevices").jsGrid("refresh");
+                $.showToast(result);
+            },
+            error: function (data, err) {
+                var result = data.responseJSON ?? data;
+                item.ping_status = "failed";
+                item.ping_result = result.message || "FAILED";
+                $("#GridDevices").jsGrid("refresh");
+                $.showToast(result);
                 console.error(data);
             }
         })
@@ -72,8 +96,8 @@ function renderData() {
     // Device Column
     gridFields.push({
         name: "name", title: "Device",
+        width: 90,
         type: "text",
-        width: null,
         validate: {
             validator: "required",
             message: "Device name is a required field."
@@ -84,7 +108,7 @@ function renderData() {
     gridFields.push({
         name: "mac", title: "MAC Address",
         type: "text",
-        width: null,
+        width: 145,
         validate: {
             validator: "pattern",
             param: /^[0-9a-f]{1,2}([\.:-])(?:[0-9a-f]{1,2}\1){4}[0-9a-f]{1,2}$/gmi,
@@ -96,7 +120,7 @@ function renderData() {
     gridFields.push({
         name: "ip", title: "Broadcast IP",
         type: "text",
-        width: null,
+        width: 145,
         validate: {
             validator: "required",
             message: "Broadcast IP Address is a required field."
@@ -114,7 +138,7 @@ function renderData() {
     gridFields.push({
         name: "interface", title: "Interface",
         type: "text",
-        width: null,
+        width: 100,
         insertTemplate: function () {
             var $result = jsGrid.fields.text.prototype.insertTemplate.call(this); // original input
             // $result.attr("disabled", true).css("background", "lightgray").val(bCastIP);
@@ -124,11 +148,60 @@ function renderData() {
         // editing: false
     });
 
+    // Optional Host IP Column
+    gridFields.push({
+        name: "target_ip", title: "IP(Ping)",
+        type: "text",
+        width: 220,
+        itemTemplate: function (value, item) {
+            var targetIP = (value || "").toString().trim();
+            var hasTargetIP = targetIP !== "";
+            var status = item.ping_status || "unknown";
+            var dotColor = "#6c757d";
+
+            if (status === "success") {
+                dotColor = "#198754";
+            } else if (status === "failed") {
+                dotColor = "#dc3545";
+            }
+
+            var $ipText = $("<span>").attr({
+                style: "margin-right:8px;white-space:nowrap;"
+            }).text(hasTargetIP ? targetIP : "-");
+
+            var $statusDot = $("<span>").attr({
+                title: item.ping_result || "Not checked",
+                style: "display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:" + dotColor + ";"
+            });
+
+            var $pingButton = $("<button>")
+                .attr({
+                    class: hasTargetIP ? "btn btn-outline-info btn-sm" : "btn btn-outline-secondary btn-sm",
+                    type: "button",
+                    title: hasTargetIP ? "Ping device IP" : "Set IP first",
+                    disabled: !hasTargetIP
+                })
+                .append("PING")
+                .on("click", function () {
+                    $.pingDeviceByName(item);
+                });
+
+            return $("<div>").attr({
+                style: "display:flex;align-items:center;gap:0;"
+            }).append($ipText).append($statusDot).append($pingButton);
+        },
+        insertTemplate: function () {
+            var $result = jsGrid.fields.text.prototype.insertTemplate.call(this);
+            $result.val("");
+            return $result;
+        }
+    });
+
     // Wake-up Action Column
     gridFields.push({
         name: "command", title: "Action",
         type: "control",
-        width: 125,
+        width: 120,
         modeSwitchButton: false,
         itemTemplate: function (value, item) {
             var $wakeUpIcon = $("<i>").attr({
@@ -155,7 +228,7 @@ function renderData() {
 
     // Modify Data Column
     gridFields.push({
-        name: "control", type: "bscontrol", width: 100,
+        name: "control", type: "bscontrol", width: 90,
         editButton: false, deleteButton: false, modeSwitchButton: true,
 
         // Button controls when displaying devices
@@ -390,7 +463,8 @@ function renderData() {
                         if (!filter[field]) {
                             continue;
                         }
-                        if (item[field].toUpperCase().indexOf(filter[field].toUpperCase()) >= 0) {
+                        var itemValue = (item[field] || "").toString();
+                        if (itemValue.toUpperCase().indexOf(filter[field].toUpperCase()) >= 0) {
                             return true;
                         }
                     }

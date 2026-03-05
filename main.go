@@ -93,6 +93,8 @@ func setupWebServer() {
 	// Define Wakeup functions with a Device Name
 	router.HandleFunc(basePath+"/wake/{deviceName}", wakeUpWithDeviceName).Methods("GET")
 	router.HandleFunc(basePath+"/wake/{deviceName}/", wakeUpWithDeviceName).Methods("GET")
+	router.HandleFunc(basePath+"/ping/{deviceName}", pingDeviceByName).Methods("GET")
+	router.HandleFunc(basePath+"/ping/{deviceName}/", pingDeviceByName).Methods("GET")
 
 	if appConfig.ReadOnly == false {
 		// Define Data save Api function

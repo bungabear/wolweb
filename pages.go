@@ -6,6 +6,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 //go:embed index.html
@@ -14,15 +16,17 @@ var indexHtml string
 func renderHomePage(w http.ResponseWriter, r *http.Request) {
 
 	pageData := struct {
-		Devices  []Device
-		VDir     string
-		BCastIP  string
-		ReadOnly bool
+		Devices      []Device
+		VDir         string
+		BCastIP      string
+		ReadOnly     bool
+		AssetVersion string
 	}{
-		Devices:  appData.Devices,
-		VDir:     appConfig.VDir,
-		BCastIP:  appConfig.BCastIP,
-		ReadOnly: appConfig.ReadOnly,
+		Devices:      appData.Devices,
+		VDir:         appConfig.VDir,
+		BCastIP:      appConfig.BCastIP,
+		ReadOnly:     appConfig.ReadOnly,
+		AssetVersion: strconv.FormatInt(time.Now().Unix(), 10),
 	}
 	if appConfig.VDir == "/" {
 		pageData.VDir = ""

@@ -13,6 +13,7 @@ type Device struct {
 	Mac         string `json:"mac"`
 	BroadcastIP string `json:"ip"`
 	Interface   string `json:"interface"`
+	TargetIP    string `json:"target_ip,omitempty"`
 }
 
 // AppData is list of Computer objects defined in JSON config file
