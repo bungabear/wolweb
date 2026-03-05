@@ -7,12 +7,9 @@ LABEL org.label-schema.vcs-url="https://github.com/sameerdhoot/wolweb" \
 RUN mkdir /wolweb
 WORKDIR /wolweb
 
-# Install Dependecies
-RUN apk update && apk upgrade && \
-    apk add --no-cache git && \
-    git clone https://github.com/sameerdhoot/wolweb . && \
-    go mod tidy && \
-    go mod download
+# Copy local source code and download dependencies
+COPY . .
+RUN go mod tidy && go mod download
 
 # Build Source Files
 RUN go build -o wolweb . 
